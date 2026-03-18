@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bob Hummer's Think-A-Word</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #f0f4ee;
+  --bg2:     #e2eade;
+  --bg3:     #d0dcc8;
+  --ink:     #0e1e0a;
+  --ink2:    #1e3818;
+  --muted:   #4a6840;
+  --red:     #b81818;
+  --gold:    #7a6008;
+  --gold2:   #a08018;
+  --gold3:   #c8a040;
+  --bord:    rgba(20,60,10,0.18);
+  --bord2:   rgba(20,60,10,0.30);
+  --dial-bg: #0d2010;
+  --dial-bg2:#142818;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html { background:var(--bg); }
+
+body {
+  min-height:100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family:'Cormorant Garamond',Georgia,serif;
+  overflow-x:hidden;
+}
+
+/* ══════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════ */
+#app {
+  position:relative; z-index:1;
+  min-height:100vh;
+  display:flex; flex-direction:column;
+}
+
+/* top header bar */
+.hdr {
+  text-align:center; padding:1.6rem 2rem 1.2rem;
+  border-bottom:2px solid var(--bord2);
+  background: var(--bg2);
+}
+.hdr-title {
+  font-family:'Cinzel Decorative',serif; font-size:34px;
+  color:var(--ink2); letter-spacing:.08em; line-height:1.15;
+}
+.rule {
+  display:flex; align-items:center; gap:12px;
+  margin:.7rem auto 0; width:260px;
+}
+.rule span { flex:1; height:1px; background:var(--bord2); }
+.rule i { font-style:normal; color:var(--gold2); font-size:14px; }
+
+/* main content area — two columns on desktop */
+.content {
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  min-height:calc(100vh - 100px);
+}
+
+/* left column — table — dark background for dial contrast */
+.col-left {
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:flex-start;
+  padding:2rem 2.5rem 3rem;
+  background: #0a1e0c;
+  border-right:2px solid var(--bord2);
+  position:relative;
+}
+
+/* right column — light parchment, dark readable text */
+.col-right {
+  display:flex; flex-direction:column;
+  padding:2.8rem 2.8rem 3rem;
+  gap:22px;
+  overflow-y:auto;
+  background: var(--bg);
+}
+
+/* ══════════════════════════════════════
+   CRYSTAL BALL MOUNT
+══════════════════════════════════════ */
+.mount {
+  position:relative;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.mount::before {
+  content:''; position:absolute; border-radius:50%; pointer-events:none;
+  width:calc(100% + 16px); height:calc(100% + 16px); left:-8px; top:-8px;
+  border:1.5px solid rgba(80,160,80,.45);
+  box-shadow: 0 0 40px rgba(60,140,60,.20), 0 0 80px rgba(5,20,8,.7);
+}
+
+
+canvas.dial {
+  display:block;
+  border-radius:50%;
+  cursor:grab;
+  touch-action:none;
+  position:relative; z-index:1;
+}
+canvas.dial:active { cursor:grabbing; }
+
+/* ══════════════════════════════════════
+   PHASES
+══════════════════════════════════════ */
+.phase { display:none; flex-direction:column; gap:20px; height:100%; }
+.phase.on { display:flex; }
+
+/* ══════════════════════════════════════
+   SETUP PANEL
+══════════════════════════════════════ */
+.panel-title {
+  font-family:'Cinzel',serif; font-size:12px; letter-spacing:.28em;
+  color:var(--ink2); text-transform:uppercase; margin-bottom:1rem;
+}
+.inst-list {
+  list-style:none; padding:0;
+  display:flex; flex-direction:column; gap:16px;
+}
+.inst-list li {
+  display:flex; gap:14px; align-items:flex-start;
+  font-size:19px; line-height:1.65; font-weight:400;
+  color: var(--ink);
+}
+.inst-list li .num {
+  font-family:'Cinzel',serif; font-size:12px; color:var(--gold2);
+  min-width:22px; margin-top:4px; font-weight:600;
+}
+.inst-list li strong { font-weight:600; color:var(--ink); }
+.inst-list li em { font-style:normal; font-weight:600; color:var(--red); }
+.note {
+  font-size:16px; color:var(--muted); line-height:1.6;
+  border-top:1px solid var(--bord); padding-top:1rem; margin-top:.5rem;
+}
+
+/* ══════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════ */
+.btn {
+  font-family:'Cinzel',serif; font-size:12px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--ink);
+  background: var(--bg2); border:1.5px solid var(--bord2);
+  border-radius:3px; padding:13px 30px; cursor:pointer;
+  transition:background .18s, border-color .18s;
+  white-space:nowrap; font-weight:600;
+}
+.btn:hover { background:var(--bg3); border-color:var(--gold2); }
+.btn:active { transform:scale(.98); }
+.btn-confirm-flash {
+  animation: confirmFlash .3s ease forwards;
+}
+@keyframes confirmFlash {
+  0%   { transform:scale(1);    background:var(--bg2); }
+  30%  { transform:scale(0.93); background:#b8d8a0; border-color:#3a7820; }
+  100% { transform:scale(1);    background:var(--bg2); }
+}
+.btn.lg { padding:16px 42px; font-size:14px; }
+.btn-row { display:flex; gap:12px; flex-wrap:wrap; }
+.btn-ghost {
+  opacity:.55; font-size:10px; letter-spacing:.14em;
+  padding:9px 20px; background:transparent;
+}
+.btn-ghost:hover { opacity:1; }
+
+/* ══════════════════════════════════════
+   PROGRESS DOTS
+══════════════════════════════════════ */
+.dots { display:flex; gap:12px; }
+.dot {
+  width:40px; height:40px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Cinzel',serif; font-size:14px; font-weight:600;
+  border:2px solid var(--bord2); color:var(--muted);
+  background: var(--bg2);
+  transition:all .4s;
+}
+.dot.done { border-color:var(--gold2); color:var(--gold2); background:var(--bg3); }
+.dot.curr { border-color:var(--ink); color:var(--ink); background:var(--bg2); box-shadow:0 0 0 3px rgba(60,35,10,.12); }
+
+/* ══════════════════════════════════════
+   STEP INSTRUCTION
+══════════════════════════════════════ */
+.step {
+  background:var(--bg2); border:1.5px solid var(--bord2);
+  border-radius:4px; padding:1.1rem 1.5rem;
+  font-size:20px; line-height:1.65; font-weight:400; color:var(--ink);
+}
+.step em { color:var(--red); font-style:normal; font-weight:600; }
+.drag-tip {
+  font-family:'Cinzel',serif;
+  font-size:12px; color:var(--muted); letter-spacing:.06em; font-weight:600;
+}
+
+/* ══════════════════════════════════════
+   MESSAGE REVEAL
+══════════════════════════════════════ */
+#msg-area {
+  display:flex; flex-direction:column; gap:16px;
+  flex:1;
+}
+.msg {
+  font-family:'Cormorant Garamond',serif;
+  font-size:23px; font-weight:400; line-height:1.7;
+  color:var(--ink);
+  opacity:0; animation:rise 1s ease forwards;
+}
+.msg.gold {
+  color:var(--ink2); font-size:26px; font-weight:600;
+}
+.msg.coda {
+  color:var(--muted); font-size:19px; font-weight:400;
+}
+.msg .sign-name {
+  color:var(--red);
+  font-family:'Cinzel',serif;
+  font-size:20px; font-style:normal;
+  font-weight:700; letter-spacing:.06em;
+}
+@keyframes rise {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ══════════════════════════════════════
+   DIVIDER ORNAMENT
+══════════════════════════════════════ */
+.orn {
+  font-size:16px; color:var(--gold2); letter-spacing:.3em;
+  text-align:center;
+}
+
+/* ══════════════════════════════════════
+   BOB HUMMER PORTRAIT
+══════════════════════════════════════ */
+.portrait-section {
+  margin-top:2rem;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:0;
+  width:100%;
+}
+.portrait-rule {
+  display:flex; align-items:center; gap:12px;
+  width:100%; margin-bottom:1.4rem;
+}
+.portrait-rule span { flex:1; height:1px; background:var(--bord2); }
+.portrait-rule i { font-style:normal; color:var(--gold2); font-size:13px; letter-spacing:.2em; }
+.portrait-frame {
+  position:relative;
+  display:inline-block;
+  padding:8px;
+  background: var(--bg2);
+  border:1.5px solid var(--bord2);
+  border-radius:4px;
+  box-shadow:
+    0 0 0 4px var(--bg),
+    0 0 0 5.5px var(--bord2),
+    4px 6px 18px rgba(20,60,10,0.15);
+}
+.portrait-frame::before,
+.portrait-frame::after {
+  content:'✦';
+  position:absolute;
+  font-size:13px;
+  color:var(--gold2);
+  line-height:1;
+}
+.portrait-frame::before { top:-10px; left:50%; transform:translateX(-50%); }
+.portrait-frame::after  { bottom:-10px; left:50%; transform:translateX(-50%); }
+.portrait-frame img {
+  display:block;
+  width:180px;
+  height:auto;
+  filter:sepia(15%) contrast(1.05);
+  border-radius:2px;
+}
+.portrait-caption {
+  margin-top:1.2rem;
+  text-align:center;
+}
+.portrait-name {
+  font-family:'Cinzel',serif;
+  font-size:14px; font-weight:600;
+  letter-spacing:.12em; color:var(--ink);
+  text-transform:uppercase;
+}
+.portrait-dates {
+  font-family:'Cormorant Garamond',serif;
+  font-size:15px; font-weight:300;
+  font-style:italic; color:var(--muted);
+  margin-top:3px;
+}
+.portrait-tribute {
+  font-family:'Cormorant Garamond',serif;
+  font-size:16px; line-height:1.65;
+  font-weight:400; color:var(--ink2);
+  text-align:center;
+  max-width:340px;
+  margin-top:.7rem;
+}
+
+/* ══════════════════════════════════════
+   PROMO BOX
+══════════════════════════════════════ */
+.promo {
+  margin-top:2.2rem;
+  background:#0a2e10;
+  border:1.5px solid #4a9040;
+  border-radius:6px;
+  padding:1.1rem 1.4rem;
+  text-align:center;
+  width:100%;
+  max-width:480px;
+  position:relative;
+  overflow:hidden;
+}
+.promo::before {
+  content:'';
+  position:absolute; inset:0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(80,160,60,0.18) 0%, transparent 70%);
+  pointer-events:none;
+}
+.promo-issue {
+  font-family:'Cinzel',serif;
+  font-size:10px; letter-spacing:.22em;
+  text-transform:uppercase;
+  color:#7ac060;
+  margin-bottom:.55rem;
+}
+.promo-text {
+  font-family:'Cormorant Garamond',serif;
+  font-size:15.5px; line-height:1.55;
+  font-weight:400; color:#d8f0c8;
+  margin-bottom:.8rem;
+}
+.promo-text strong {
+  color:#f0fce8; font-weight:600;
+}
+.promo-link {
+  display:inline-block;
+  font-family:'Cinzel',serif;
+  font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase;
+  color:#0a2e10;
+  background:#7ac060;
+  border:none; border-radius:3px;
+  padding:9px 20px;
+  text-decoration:none;
+  font-weight:700;
+  transition:background .18s, color .18s;
+}
+.promo-link:hover {
+  background:#a0d880;
+  color:#062010;
+}
+.promo-link:active { transform:scale(.98); }
+
+/* ══════════════════════════════════════
+   RESPONSIVE — SINGLE COLUMN BELOW 800px
+══════════════════════════════════════ */
+@media (max-width:800px) {
+  .content { grid-template-columns:1fr; }
+  .col-left { border-right:none; padding:2rem 1.2rem 1.5rem; }
+  .col-right { padding:1.5rem 1.2rem 2.5rem; }
+  .hdr-title { font-size:24px; }
+  canvas.dial { max-width:300px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── HEADER ── -->
+  <div class="hdr">
+    <h1 class="hdr-title">Bob Hummer's Think-A-Word</h1>
+    <div class="rule"><span></span><i>✦</i><span></span></div>
+  </div>
+
+  <!-- ── MAIN CONTENT ── -->
+  <div class="content">
+
+    <!-- LEFT: table (always visible) -->
+    <div class="col-left">
+      <div class="mount" id="ball-mount">
+        <canvas class="dial" id="main-dial"></canvas>
+
+      </div>
+
+      <div class="promo">
+        <p class="promo-issue">Cardopolis &nbsp;·&nbsp; Issue 50</p>
+        <p class="promo-text">
+          Experimental version of <strong>Bob Hummer's Think-A-Word</strong><br>
+          as described in <strong>Cardopolis 50</strong> —<br>
+          the newsletter for card magic enthusiasts
+        </p>
+        <a class="promo-link" href="https://cardopolis.substack.com/" target="_blank" rel="noopener">
+          Visit Cardopolis &#8599;
+        </a>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: phases -->
+    <div class="col-right">
+
+      <!-- PHASE 1: SETUP -->
+      <div class="phase on" id="ph-setup">
+        <div>
+          <p class="panel-title">How it works</p>
+          <ol class="inst-list">
+            <li><span class="num">I</span><span>Think of any one of the <strong>26 playing cards</strong> on the inner ring. Keep it entirely to yourself.</span></li>
+            <li><span class="num">II</span><span>Think of a <strong>four or five letter word</strong>. Commit to it.</span></li>
+            <li><span class="num">III</span><span><em>Rotate the inner ring of playing cards</em> so your chosen card points to each letter of your word in turn. You can drag from anywhere on the inner ring — that way I cannot know which card you are thinking of.</span></li>
+            <li><span class="num">IV</span><span>Press <em>Confirm</em> after each letter. Speak nothing aloud.</span></li>
+          </ol>
+          <p class="note">Any everyday word will serve — avoid proper names, abbreviations or unusual terms.</p>
+        </div>
+
+        <div class="orn" style="margin:4px 0;color:var(--gold2)">✦ ✦ ✦</div>
+
+        <div>
+          <p style="font-size:20px;font-style:italic;color:var(--ink);line-height:1.5;margin-bottom:16px">Tell me one thing. Does your chosen word have 4 letters or 5?</p>
+          <div class="btn-row">
+            <button class="btn lg" id="btn4">Four letters</button>
+            <button class="btn lg" id="btn5">Five letters</button>
+          </div>
+        </div>
+
+        <div class="portrait-section">
+          <div class="portrait-rule"><span></span><i>✦ ✦ ✦</i><span></span></div>
+          <div class="portrait-frame">
+            <img src="data:image/jpeg;base64,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" alt="Bob Hummer, magician and inventor">
+          </div>
+          <div class="portrait-caption">
+            <p class="portrait-name">Robert Wesley Hummer</p>
+            <p class="portrait-dates">1906–1981</p>
+            <p class="portrait-dates">Magician &amp; Inventor</p>
+            <p class="portrait-tribute">The mind behind the original Think-A-Word</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PHASE 2: SPELLING -->
+      <div class="phase" id="ph-spell">
+        <div class="dots" id="tw-dots"></div>
+        <div class="step" id="step-txt">—</div>
+        <p class="drag-tip">Rotate the inner ring so your card points to each letter</p>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn" id="btn-confirm">Confirm letter</button>
+          <button class="btn btn-ghost" id="btn-restart">Start over</button>
+        </div>
+      </div>
+
+      <!-- PHASE 3: REVEAL -->
+      <div class="phase" id="ph-reveal">
+        <div id="msg-area"></div>
+        <button class="btn btn-ghost" id="btn-reset" style="display:none;margin-top:1.5rem">Begin again</button>
+        <div id="reveal-portrait" style="display:none;margin-top:1rem">
+<div class="portrait-section">
+          <div class="portrait-rule"><span></span><i>✦ ✦ ✦</i><span></span></div>
+          <div class="portrait-frame">
+            <img src="data:image/jpeg;base64,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" alt="Bob Hummer, magician and inventor">
+          </div>
+          <div class="portrait-caption">
+            <p class="portrait-name">Robert Wesley Hummer</p>
+            <p class="portrait-dates">1906–1981</p>
+            <p class="portrait-dates">Magician &amp; Inventor</p>
+            <p class="portrait-tribute">The mind behind the original Think-A-Word</p>
+          </div>
+        </div>
+        </div>
+      </div>
+
+    </div><!-- col-right -->
+  </div><!-- content -->
+</div><!-- app -->
+
+<script>
+(function(){'use strict';
+
+/* ═══════════════════════════════════════
+   DATA
+═══════════════════════════════════════ */
+const CARDS  = ['A♠','3♥','7♣','Q♦','5♠','J♥','2♣','9♦','K♠','4♥','8♣','6♦','10♠',
+               '2♥','J♣','5♦','9♠','A♥','6♣','K♦','3♠','8♥','4♣','10♦','7♠','Q♥'];
+const CNAMES = ['the Ace of Spades','the Three of Hearts','the Seven of Clubs','the Queen of Diamonds',
+                'the Five of Spades','the Jack of Hearts','the Two of Clubs','the Nine of Diamonds',
+                'the King of Spades','the Four of Hearts','the Eight of Clubs','the Six of Diamonds',
+                'the Ten of Spades','the Two of Hearts','the Jack of Clubs','the Five of Diamonds',
+                'the Nine of Spades','the Ace of Hearts','the Six of Clubs','the King of Diamonds',
+                'the Three of Spades','the Eight of Hearts','the Four of Clubs','the Ten of Diamonds',
+                'the Seven of Spades','the Queen of Hearts'];
+const ABC    = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const ORD    = ['first','second','third','fourth','fifth'];
+
+const W4 = 'abbr abbé abed abet able ably abut acct aced aces ache achy acid acme acne acre acts adds advt adze aeon aery afar agar aged ages agog ague ahem ahoy aide aids ails aims airs airy ajar akin alas albs alga alit ally alms aloe also alto alts alum amen amid amir ammo amok amps anal anew ankh anon ante anti ants anus aped apes apex apps apse aqua arch arcs area ares aria arid arks arms army arts arty ashy asks asps assn asst atom atop atty auks aunt aura auto avdp aver avid avow away awed awes awls awol awry axed axes axis axle axon ayes baas babe baby back bade bags bail bait bake bald bale balk ball balm band bane bang bani bank bans barb bard bare barf bark barn bars base bash bask bass bast bate bath bats baud bawl bays bead beak beam bean bear beat beau beck beds beef been beep beer bees begs bell belt bend bent berg berm best beta bets bevy bias bibs bide bids bier biff bike bile bilk bill bind bins bird bite blab blah blat bldg bled blew blip blob bloc blog blot blow blue blur blvd boar boat bobs bode body boga bogs bogy boil bola bold bole boll bolt bomb bond bone bong bony boob book boom boon boor boos boot bops bore born bosh boss both bowl bows boys bozo brad brag bran bras brat bray bred brew brig brim brow buck buds bugs bulb bulk bull bump bums bung bunk buns bunt buoy burg burn burp burr burs bush buss bust busy buts butt buys buzz byes byte cabs cads café cage cagy cake calf calk call calm came camp cams cane cans cant cape caps card care carp cars cart case cash cask cast cats cave caws cede cell cent chad chap char chat chef chew chic chid chin chip chit chop chow chug chum cite city clad clam clan clap claw clay clef clew clip clit clod clog clop clot cloy club clue coal coat coax cobs cock coda code cods coed cogs coif coil coin coke cola cold cols colt coma comb come comm cone conj conk cons cont cook cool coon coop coos coot cope cops copy cord core cork corm corn corp cost cosy cote cots coup cove cowl cows cozy crab crag cram crap craw cray crew crop crow crud crux cube cubs cuds cued cues cuff cull cult cums cunt cups curb curd cure curs curt cusp cuss cute cuts cyst czar dado dads daft dais dale dame damn damp dams dank dare dark darn dart dash data daub dawn days dded dead deaf deal dean dear debs debt deck deed deem deep deer deft deli dell demo dens dent deny dept desk dewy dial dice dick died dies diet diff digs dike dime dims dine ding dink dins dint dips dire dirk dirt disc dish disk diss diva dive dock docs dodo doer does doff dogs dole doll dolt dome done dons doom door dope dopy dork dorm dory dose dote doth dots dour dove down doze drab drag dram draw dray drew drip drop drub drug drum drys dual dubs duck duct dude duds duel dues duet duff duke dull duly dumb dump dune dung dunk duns duos dupe dusk dust duty dyed dyer dyes dyke each earl earn ears ease east easy eats eave echo eddy edge edgy edit eels eery eggs egis egos eked ekes elks ells elms else emir emit emos emus ends eons epic eras ergo ergs errs etch euro even ever eves evil ewer ewes exam excl exec exes exit expo eyed eyes face fact fade fads fags fail fain fair fake fall fame fang fans fare farm fart fast fate fats faun fawn faze fear feat feds feed feel fees feet fell felt fend fens fern fest feta feud fiat fibs fief fife file fill film find fine fink fins fire firm fish fist fits five fizz flab flag flak flan flap flat flaw flax flay flea fled flee flew flex flip flit floe flog flop flow flub flue flux foal foam fobs foci foes fogs fogy foil fold folk fond font food fool foot fops fora ford fore fork form fort foul four fowl foxy frat fray free fret from ftps fuck fuel full fume fums fund funk furl fury fuse fuss futz fuze fuzz fête gabs gads gaff gage gags gain gait gala gale gall gals game gamy gang gape gaps garb gash gasp gate gave gawk gays gaze gear geed geek gees geez geld gels gelt gems gene gens gent germ gets gibe gift gigs gild gill gilt gins gird girl girt gist give glad glee glen glib glob glop glow glue glum glut gnaw gnus goad goal goat gobs gods goes gold golf gone gong gonk good goof gook goon goop gore gorp gosh gout govt gown grab grad gram gray grep grew grey grid grim grin grip grit grog grok grue gulf gull gulp gums gunk guns guru gush gust guts guys gybe gyms gyps gyro hack haft hags hail hair hake hale half hall halo halt hams hand hang hank hard hare hark harm harp hart hash hasp hate hath hats haul have hawk haws hays haze head heal heap heat heck heed heel heft heir held hell helm help hemp hems hens herb herd here hers hewn hews hick hide hied hies high hike hill hilt hims hind hing hint hips hire hiss hits hive hoax hobo hobs hock hods hoed hoes hogs hold hole holy home homy hone honk hood hoof hook hoop hoot hope hops horn hose host hour hove howl hows hubs hued hues huff huge hugs hula hulk hull hump hums hung hunk hunt hurl hurt husk huts hype hypo iamb ibex ibid ibis iced ices icky icon idea ides idle idly idol idyl iffy ikon ilks ills imam imps inch incs info inky inns into ions iota iris irks iron isle isms itch item jabs jack jade jags jail jamb jams jape jars jaws jays jazz jeep jeer jeez jell jest jets jibe jibs jigs jilt jinn jinx jive jock john join joke jolt josh jots jowl joys judo jugs jump junk jury just jute juts kale keel keen keep kegs kelp kens kept keto keys khan kick kids kill kiln kilo kilt kind king kink kiss kite kith kiwi knew knit knob knot know koan kook labs lace lack lacy lade lads lady lags laid lain lair lake lama lamb lame lamp lams land lane lank laps lard lark lase lash lass last late lath lats laud lava lawn laws lays laze lazy lead leaf leak lean leap leas leek leer lees left legs leis lend lens lent lept less lest lets levy lewd lice lick lids lied lief lien lies lieu life lift like lilt lily limb lime limn limo limp line link lint lion lips lira lire lisp list lite live load loam loan lobe lobs loci lock loco lode loft logo logs loin loll lone long look loom loon loot lope lops lord lore lorn lose loss lost loth lots loud lout love lows luau lube luck lull lump lung lure lurk lush lust lute lynx lyre mace made mads maid mail maim main make male mall malt mama mane mans many maps mare mark mars mart masc mash mask mass mast mate math mats matt maul maws mayo maze mead meal mean meat meek megs meld melt meme memo mend menu meow mere mesa mesh mess meta mete mewl mews mica mice mien miff mike mile milf milk mils mime mind mine mini mink mint minx mire misc miss mist mite mitt mkay moan moat mobs mock mode mods mold mole moll molt moms monk mood moon moor moos moot mope mops more morn moss most mote moth move mown mows much muck muff mugs mule mull mung murk muse mush musk muss must mute mutt myna myth nabs nags nail name nape naps narc nark nary natl nave navy nays near neat neck need neon nerd nest nets news newt next nibs nice nick nigh nine nips nite nits node nods noel noes none nook noon nope norm nose nosh note noun nous nova nubs nude nuke null numb nuns nuts oafs oaks oars oath oats obey obit oboe odds odes odor offs ogle ogre ohms oils oily oink okay okra oleo omen omit once only onto onus oops ooze open opts opus oral orbs orcs ores orgy ouch ours oust outs oval oven over ovum owed owes owls owns oxen pace pack pact pads page pail pain pair pale pall palm pals pane pang pans pant paps pare park pars part pass past pate path pats pave pawl pawn paws pays peak peal peas peat peck pecs peed peek peel peep peer pees pegs pelt pend peon perk perm pert peso pest pews pica pick pied pigs pike pill pimp pine ping pink pins pipe pips piss pita pith pits pity plan play plea plod plop plot plow ploy plug plum plus pock pods poem poet poke poky pole poll polo pols pomp pond pone pony pooh pool poop poor pope pore pork porn port pose posh poss post posy pots pour pout pray prep pres prey prig prim prod prof prom pron prop pros pubs puck puff pugs puke pull pulp puma pump punk puns puny pupa pups pure purl push puss puts putt pwns pyre quad ques quid quip quit quiz race rack racy raft rage rags raid rail rain raja rake ramp rams rang rank rant rapt rare rash rasp rate rats rave rays raze razz read real ream reap rear recd reds reek reel refs rehi rein reis rely rend rent reps resp rest revs rhea rice rich rick ride rife riff rift rigs rile rill rime rims rind ring rink riot ripe rips rise risk rite roam roan roar robe robs rock rode rods roes roil role roll romp rood roof rook room root rope rose rosy rote rots rout roué rove rows rube rubs ruby rude rued rues ruff ruin rule rump rums rung runs runt ruse rush rusk rust ruts sack sacs safe saga sage sago sags said sail sake saki sale salt same sand sang sank sans saps sari sash sass sate save sawn saws says scab scad scag scam scan scar scat scow scud scum seal seam sear seas seat secs sect secy seek seem seen seep seer sees self sell send sent sera sere serf sets sewn sews sexy shad shag shah sham shat shed shes shim shin ship shit shod shoe shoo shop shot shut sick sics side sift sigh sign silk sill silo silt sine sing sink sins sips sirs site sits situ size skew skid skim skin skip skis skit slab slag slam slap slat slaw slay slew slid slim slip slit slob sloe slog slop slot slow slue slug slum slur slut smit smog smug smut snag snap snip snit snob snot snow snub snug soak soap soar sobs sock soda sods sofa soft soil sold sole soli solo sols some song sons soon soot sops sore sort sots soul soup sour sown sows soya spam span spar spas spay spec sped spew spin spit spot spry spud spun spur stab stag star stat stay stem step stew stir stop stow stub stud stun subj subs such suck suds sued sues suet suit sumo sump sums sung sunk suns sups sure surf swab swag swam swan swap swat sway swig swim swop swum tabs tabu tack taco tact tads tags tail take talc tale talk tall tame tamp tams tang tank tans taps tare taro tarp tars tart tats taut taxi tbsp teak teal team teas teat tech teed teem teen tees tell tend tent term tern test text than that thaw thee them then they thin this thou thru thud thug thus tick tics tide tidy tied tier ties tiff tike tile till tilt time tine ting tint tiny tipi tips tire tiro tits toad toed toes tofu toga togs toil toke told toll tomb tome toms tone tong tony took tool toot tops tore torn tort toss tost tote tots tour town tows tram trap tray tree trim trio trip trod tron trot troy true tsar ttys tuba tuck tuft tugs tuna tune tuns turd turf turn tush tusk tutu twee twig twin twit twos tyke type typo tzar ulna undo unit unto upon urea uric urns used user uses vain vale vamp vane vape vars vary vase vast vats veal veep veer veil vein veld vend vent verb very vest veto vets vial vibe vice vied vies view vile vine viol visa vise viva void vole volt vote vows wack wade wadi wads waft wage wags waif wail wait wake wale walk wall wand wane wank want ward ware warm warn warp wars wart wary wash wasp watt wave wavy waxy ways weak wean webs weds week weep weer wees weft weir weld well welt wend wens went wept were west wets wham what when whet whey whim whip whit whiz whoa whom whys wick wide wife wigs wiki wild will wilt wimp wind wine wing wink wino wins wipe wire wiry wise wish wisp wist with wkly woes woke woks wolf womb wont wood woof wool woos word wore work worm worn wove wows wrap wren writ wuss xref yack yaks yams yank yaps yard yarn yawl yawn yaws yeah year yeas yell yelp yens yeps yest yews yips yock yoga yogi yoke yolk yore your yous yowl yuck yuks yule yups zany zaps zeal zeds zens zero zest zeta zinc zing zits zone zoom zoos élan épée'.split(' ');
+
+const W5 = 'abaci aback abaft abase abash abate abbey abbot abbés abeam abets abhor abide abler abode abort about above abuse abuts abuzz abyss ached aches achoo acids acing acmes acorn acres acrid acted actor acute adage adapt added adder addle adept adieu adiós adman admen admin admit adobe adopt adore adorn adult adzes aegis aeons aerie affix afire afoot afoul after again agape agate agave agent agile aging agism aglow agony agree ahead aided aides ailed aimed aired aisle alarm album alder alert algae alias alibi alien align alike aline alive allay alley allot allow alloy aloes aloft aloha alone along aloof aloud alpha altar alter altho altos alums amass amaze amber amble ameba ameer amend amigo amino amirs amiss amity among amour ample amply ampul amuck amuse angel anger angle angry angst anime anion anise ankhs ankle annex annoy annul anode anons anted antes antic antis anvil aorta apace apart aphid aping appal apple apply apron apses apter aptly aquae aquas arbor arced ardor areas arena argon argot argue arias arise armed armor aroma arose array arrow arson artsy ascot ashed ashen ashes aside asked askew aspen aspic assay asses asset assoc aster astir atlas atoll atoms atone atria attar attic audio audit auger aught augur aunts aurae aural auras autos avail avast avers avert avian avoid avows await awake award aware awash awful awing awoke axial axing axiom axles axons azure baaed babel babes backs bacon badge badly bagel baggy bails baits baize baked baker bakes balds baled bales balks balky balls balms balmy balsa banal bands bandy banes bangs banjo banks banns barbs bards bared barer bares barfs barge barks barns baron basal based baser bases basic basil basin basis basks bassi basso baste batch bated bates bathe baths batik baton batty bauds bawdy bawls bayed bayou beach beads beady beaks beams beans beard bears beast beats beaus beaux bebop becks beech beefy beeps beers beets befit befog began begat beget begin begot begun beige being belay belch belie belle bells belly below belts bench bends bents beret bergs berms berry berth beryl beset besom besot bests betas bevel bible bicep biddy bided bides bidet biers biffs bight bigot biked biker bikes bilge bilks bills billy bimbo binds binge bingo biped birch birds birth bison bitch bites blabs black blade blame bland blank blare blast blasé blats blaze bleak bleat bleed bleep blend blent bless blest blimp blind bling blink blips bliss blitz bloat blobs block blocs blogs blond blood bloom blots blown blows blued bluer blues bluff blunt blurb blurs blurt blush board boars boast boats bobby boded bodes bogey boggy bogie bogon bogus boils boink bolas boles bolls bolts bombs bonds boned boner bones boney bongo bongs bonny bonus boobs booby booed books booms boons boors boost booth boots booty booze boozy borax bored borer bores borne boron bosom bossy bosun botch bough bound bouts bowed bowel bower bowls boxed boxen boxer boxes bozos brace bract brads brags braid brain brake brand brash brass brats brave bravo brawl brawn brays bread break breed brews briar bribe brick bride brief brier brigs brims brine bring brink briny brisk broad broil broke brood brook broom broth brown brows bruin brunt brush brusk brute bucks buddy budge buffs buggy bugle build built bulbs bulge bulgy bulks bulky bulls bully bumps bumpy bunch bungs bunks bunny bunts buoys burgs burka burly burns burnt burps burro burrs burst busby bused buses bushy busts butch butte butts buxom buyer bylaw bytes byway cabal cabby cabin cable cacao cache cacti caddy cadet cadge cadre cafés caged cages cagey cairn caked cakes calfs calif calks calls calms calve calyx camel cameo camps campy canal candy caned canes canny canoe canon canto cants caped caper capes capon carat carbs cards cared cares caret cargo carol carom carpi carps carry carts carve cased cases casks caste casts catch cater catty caulk cause caved caves cavil cawed cease cedar ceded cedes celli cello cells cents chads chafe chaff chain chair chalk champ chant chaos chaps chapt charm chars chart chary chase chasm chats cheap cheat check cheek cheep cheer chefs chess chest chews chewy chick chide chief child chile chili chill chime chimp china chink chino chins chips chirp chits chive chock choir choke chomp chops chord chore chose chows chuck chugs chump chums chunk churl churn chute cider cigar cilia cinch circa cited cites civet clack claim clamp clams clang clank clans claps clash clasp class claws clean clear cleat clefs cleft clerk clews click cliff climb clime cling clink clips clipt clits cloak clock clods clogs clomp clone clops close cloth clots cloud clout clove clown cloys clubs cluck clued clues clump clung clunk coach coals coast coats cobra cocci cocks cocky cocoa codas coded codes codex coeds coifs coils coins coked cokes colas colds colic colon color colts comas combo combs comer comes comet comfy comic comma compo conch condo cones conga conic conks contd cooed cooks cooky cools coons coops coots coped copes copra copse coral cords cored cores corks corms corns corny corps costs cotes couch cough could count coupe coups court coven cover coves covet covey cowed cower cowls coyer coyly cozen crabs crack craft crags cramp crams crane crank crape craps crash crass crate crave crawl craws crays craze crazy creak cream credo creed creek creel creep crepe crept cress crest crews cribs crick cried crier cries crime crimp crisp croak croci crock crone crony crook croon crops cross croup crowd crown crows crude cruel cruet cruft crumb crush crust crypt cubed cubes cubic cubit cuffs cuing culls cults cumin cunts cupid curbs curds cured curer cures curie curio curls curly curry curse curst curve curvy cushy cusps cuter cutup cycle cynic cysts czars dacha daddy dados daffy daily dairy daisy dales dally dames damns damps dance dandy dared dares darns darts dated dates datum daubs daunt davit dawns dazed dazes dding deals dealt deans dears death debar debit debts debug debut decaf decal decay decks decor decoy decry deeds deems deeps deers defer deice deify deign deism deity delay delis dells delta delve demon demos demur denim dense dents depot depth derby desks deter detox deuce devil dhoti dials diary diced dices dicey dicks dicky dicta diets digit diked dikes dills dilly dimer dimes dimly dined diner dines dingo dings dingy dinky diode direr dirge dirks dirty disco discs disks ditch ditto ditty divan divas dived diver dives divot divvy dizzy djinn docks dodge dodgy dodos doers doffs doggy dogie dogma doily doing doled doles dolls dolly dolts domed domes donor donut dooms doors doped dopes dopey dorks dorky dorms dosed doses doted dotes dotty doubt dough douse doves dowdy dowel downs downy dowry dowse doyen dozed dozen dozes drabs draft drags drain drake drama drams drank drape drawl drawn draws drays dread dream dregs dress dried drier dries drift drill drily drink drips drive droid droll drone drool droop drops dross drove drown drubs drugs druid drums drunk dryad dryer dryly ducal ducat duchy ducks ducts duded dudes duels duets dukes dulls dully dummy dumps dumpy dunce dunes dungs dunks dunno duped dupes dusky dusts dusty duvet dwarf dweeb dwell dwelt dyers dying dyked dykes eager eagle earls early earns earth eased easel eases eaten eater eaves ebbed ebony echos edema edged edger edges edict edify edits eerie egged egret eider eight eject eking elate elbow elder elect elegy elfin elide elite elope elude elves email embed ember emcee emend emery emirs emits emoji emote empty enact ended endow endue enema enemy enjoy ennui enrol ensue enter entry enure envoy epics epoch epoxy equal equip erase erect erode erred error erupt essay ester ether ethic ethos euros evade evens event every evict evils evoke ewers exact exalt exams excel execs exert exile exist exits expel expos extol extra exude exult eying fable faced faces facet facts faded fades fagot fails faint fairs fairy faith faked faker fakes fakir falls false famed fancy fangs fanny farce fared fares farms farts fasts fatal fated fates fatty fault fauna fauns favor fawns faxed faxes fazed fazes fears feast feats fecal feces feeds feels feign feint fells felon felts femur fence fends feral ferry fests fetal fetch feted fetid fetus feuds fever fewer fezes fiats fiber fiche fiefs field fiend fiery fifes fifth fifty fight filch filed files filet fills filly films filmy filth final finch finds fined finer fines finis finks finny fiord fired fires firms first firth fishy fists fitly fiver fives fixed fixer fixes fizzy fjord flack flags flail flair flake flaky flame flank flaps flare flash flask flats flaws flays fleas fleck flees fleet flesh flick flied flier flies fling flint flips flirt flits float flock floes flogs flood floor flops flora floss flour flout flown flows flubs flues fluff fluid fluke fluky flume flung flunk flush flute flyby flyer foals foams foamy focal focus fogey foggy foils foist folds folio folks folly fondu fonts foods fools foots foray force fords fores forge forgo forks forms forte forth forts forty forum fouls found fount fours fowls foxed foxes foyer frack frags frail frame franc frank frats fraud frays freak freed freer frees fresh frets friar fried frier fries frill frisk frizz frock frogs frond front frost froth frown froze fruit frump fryer fucks fudge fuels fugue fulls fully fumed fumes funds fungi funks funky funny furls furor furry furze fused fuses fussy fusty futon fuzed fuzes fuzzy fêtes gabby gable gaffe gaffs gaged gages gaily gains gaits galas gales galls gamed gamer games gamey gamin gamma gamut gangs gaped gapes garbs gases gasps gassy gated gates gaudy gauge gaunt gauze gauzy gavel gawks gawky gayer gayly gazed gazer gazes gears gecko geeks geeky geese gelds gelid genes genie genii genre gents genus geode germs getup ghost ghoul giant gibed gibes giddy gifts gilds gills gilts gimme gimpy gipsy girds girls girth girts gismo given gives gizmo glade glads gland glare glass glaze gleam glean glens glide glint glitz gloat globe globs gloom glory gloss glove glows glued glues gluey gluts glyph gnarl gnash gnats gnawn gnaws gnome goads goals goats godly gofer going golds golfs golly gonad goner gongs gonks gonna gonzo goods goody gooey goofs goofy gooks goons goose gored gores gorge gorps gorse gotta gouge gourd gouty gowns grabs grace grade grads graft grail grain grams grand grant grape graph grasp grass grate grave gravy grays graze great grebe greed green greet greps greys grids grief grill grime grimy grind grins gripe grips grist grits groan groin groks groom grope gross group grout grove growl grown grows grubs gruel grues gruff grunt guano guard guava guess guest guide guild guile guilt guise gulag gulch gulfs gulls gully gulps gumbo gummy gunny guppy gurus gushy gusto gusts gusty gutsy guyed gybed gybes gypsy gyros habit hacks hafts haiku hails hairs hairy hakes haled haler hales halls halon halos halts halve hands handy hangs hanks hanky happy hardy hared harem hares harks harms harps harpy harsh harts hasps haste hasty hatch hated hater hates hauls haunt haven haves havoc hawed hawks hayed hazed hazel hazes heads heady heals heaps heard hears heart heath heats heave heavy hedge heeds heels hefts hefty heirs heist helix hello helms helot helps hence henna herbs herds heron heros hertz hewed hewer hexed hexes hicks hided hides highs hiked hiker hikes hills hilly hilts hinds hinge hings hints hippo hippy hired hires hitch hived hives hoagy hoard hoary hobby hobos hocks hogan hoist hokey hokum holds holed holes homed homer homes homey homie honed hones honey honks honor hooch hoods hooey hoofs hooks hooky hoops hoots hoped hopes horde horns horny horse horsy hosed hoses hosts hotel hotly hound hours house hovel hover howdy howls hubby huffs huffy huger hulas hulks hulls human humid humor humps humus hunch hunks hunts hurls hurts husks husky hussy hutch hydra hyena hying hymen hymns hyped hyper hypes hypos iambs icier icily icing icons ideal ideas idiom idiot idled idler idles idols idyll idyls igloo ikons illus image imams imbed imbue impel imply inane inapt inbox inced incur index indue inept inert infer infix inked inlay inlet inner input inset intel inter intro inure ioctl iotas irate irked irons irony isles islet issue itchy items ivies ivory jabot jacks jaded jades jails jambs japan japed japes jaunt jawed jazzy jeans jeeps jeers jehad jello jells jelly jerks jerky jests jetty jewel jibed jibes jiffy jihad jilts jimmy jinni jinns jived jives jocks johns joins joint joist joked joker jokes jolts joule joust jowls joyed judge juice juicy julep jumbo jumps jumpy junco junks junky junta juror kabob kapok kaput karat karma kayak kazoo kebab kebob keels keens keeps ketch keyed khaki khans kicks kicky kiddo kiddy kills kilns kilos kilts kinda kinds kings kinks kinky kiosk kited kites kitty kiwis kluge klutz knack knave knead kneel knees knell knelt knife knits knobs knock knoll knots known knows koala koans kooks kooky kopek krone króna kudos kudzu label labia labor laced laces lacks laded laden lades ladle lager lairs laity lakes lamas lambs lamed lamer lames lamps lance lands lanes lanky lapel lapse larch lards large largo larks larva lased laser lases lasso lasts latch later latex lathe laths lauds laugh lawns laxer laxly layer lazed lazes leach leads leafs leafy leaks leaky leans leaps leapt learn lease leash least leave ledge leech leeks leers leery lefts lefty legal leggy legit lemma lemme lemon lemur lends leper letup levee level lever lexer liars libel licit licks liege liens lifer lifts light liked liken liker likes lilac lilts limbo limbs limed limes limit limns limos limps lined linen liner lines lingo links lints lions lipid liras lisle lisps lists liter lithe lived liven liver lives llama llano loads loafs loamy loans loath lobby lobed lobes local locks locus lodes lodge lofts lofty loges logic login logon logos loins lolls loner longs looks looms loons loony loops loopy loose loots loped lopes lords loser loses lotto lotus louse lousy louts loved lover loves lowed lower lowly loxes loyal luaus lubed lubes lucid lucks lucky lucre lulls lumps lumpy lunar lunch lunge lungs lupin lupus lurch lured lures lurid lurks lusts lusty lutes lying lymph lynch lyres lyric macaw maced maces macho macro madam madly magic magma maids mails maims mains maize major maker makes males malls malts mamas mambo mamma manes manga mange mango mangy mania manic manly manna manor manse maple march mares maria marks marsh marts masks mason masts match mated mates matts matzo mauls mauve maven mavin maxed maxes maxim maybe mayor mazes meals mealy means meant meats meaty mecca medal media medic meets melds melts memes memos mends menus meows mercy meres merge merit merry mesas messy metal meted meter metes metro mewed mewls miaow micra middy midge midst miens miffs might miked mikes milch miler miles milfs milks milky mills mimed mimes mince minds mined miner mines minim minis minks minor mints minty minus mired mires mirth misdo miser mists misty miter mites mitts mixed mixer mixes moans moats mocha mocks modal model modem modes mogul moire moist molar molds moldy moles molls molts momma mommy money monks month mooch moods moody mooed moons moors moose moots moped mopes moral moray mores morns moron mosey mossy motel motes moths motif motor motto mound mount mourn mouse mousy mouth moved mover moves movie mowed mower mucks mucky mucus muddy muffs mufti muggy mulch mules mulls multi mummy mumps munch mungs mural murks murky mused muses mushy music musky mussy musts musty muted muter mutes mutts mynah mynas myrrh myths mêlée nabob nacho nacre nadir naiad nails naive naked named names nanny napes nappy narcs narks nasal nasty natal natty naval navel naves nears neath necks needs needy neigh nerds nerdy nerve nervy nests never newel newer newly newsy newts nexus nicer niche nicks niece nifty nigga night nimbi nines ninja ninny ninth nippy niter nites nixed nixes noble nobly nodal noddy nodes noels noise noisy nomad nonce nooks noose norms north nosed noses nosey notch noted notes nouns novae novas novel noway nuder nudes nudge nuked nukes nulls numbs nurse nutty nylon nymph oaken oakum oared oases oasis oaten oaths obese obeys obits oboes occur ocean ocher ochre octal octet odder oddly odium odors offal offed offer often ogled ogles ogres oiled oinks okays okras olden older oldie olive omega omens omits onion onset oozed oozes opals opens opera opine opium opted optic orals orate orbit order organ osier other otter ought ounce ousts outdo outed outer outgo outré ovary ovens overs overt ovoid ovule owing owlet owned owner oxbow oxide ozone paced paces packs pacts paddy padre paean pagan paged pager pages pails pains paint pairs paled paler pales palls palms palmy palsy panda panel panes pangs panic pansy pants panty papal papas papaw paper parch pared pares parka parks parry parse parts party pasha passé pasta paste pasts pasty patch pates paths patio patsy patty pause paved paves pawed pawls pawns payed payee payer peace peach peaks peals pearl pears pease pecan pecks pedal peeks peels peeps peers peeve pekoe pelts penal pence pends penes penis penny peons peony peppy perch peril perks perky perms pesky pesos pests petal peter petty pewee phage phase phial phish phlox phone phony photo phyla piano picks picky piece piers piety piggy pigmy piing piked piker pikes pilaf pilau pilaw piled piles pills pilot pimps pinch pined pines pings pinks pinky pinto pints pinup pious piped piper pipes pipit pique pitch pithy piton pivot pixel pixie pizza place plaid plain plait plane plank plans plant plate plays plaza plead pleas pleat plied plies plods plonk plops plots plows ploys pluck plugs plumb plume plump plums plunk plush poach pocks podia poems poesy poets point poise poked poker pokes pokey polar poled poles polio polka polls polyp ponds pones pooch poohs pools poops popes poppa poppy porch pored pores porno ports posed poser poses posit posts pouch pound pours pouts power poxes prank prate prawn prays preen preps press preys price prick pricy pride pried pries prigs prime primp print prior prism privy prize probe prods profs promo proms prone prong proof props prose prosy proud prove prowl prows proxy prude prune psalm pshaw psych pubic pucks pudgy puffs puffy puked pukes pulls pulps pulpy pulse pumas pumps punch punks punts pupae pupal pupas pupil puppy puree purer purge purls purrs purse pushy pussy putts putty pwned pygmy pylon pyres pyxes quack quads quaff quail quake qualm quark quart quash quasi quays queen queer quell query quest queue quick quids quiet quill quilt quine quips quire quirk quite quits quoit quota quote quoth rabbi rabid raced racer races racks radar radii radio radon rafts ragas raged rages raids rails rains rainy raise rajah rajas raked rakes rally ramps ranch randy range rangy ranks rants raped rapes rapid rared rarer rares rasps raspy rated rates ratio ratty raved ravel raven raves rawer rayon razed razes razor reach react reads ready realm reals reams reaps rearm rears rebel rebus rebut recap recta recur redid reeds reedy reefs reeks reels reeve refer refit regal rehab reign reins relax relay relic remit renal rends renew rents reorg repay repel reply reran rerun reset resin rests retch retry reuse revel revue rheas rheum rhino rhyme riced rices ricks rider rides ridge rifer riffs rifle rifts right rigid rigor riled riles rills rimed rimes rinds rings rinks rinse riots ripen riper risen riser rises risks risky rites ritzy rival riven rivet roach roads roams roans roars roast robed robes robin robot rocks rocky rodeo roger rogue roils roles rolls roman romps roods roofs rooks rooms roomy roost roots roped ropes roses rosin rotor rouge rough round rouse route routs roués roved rover roves rowdy rowed rowel rower royal rubes ruble ruddy ruder ruffs rugby ruing ruins ruled ruler rules rumba rummy rumor rumps runes rungs runic runny runts rupee rural ruses rusks rusts rusty saber sable sabre sacks sades sadly safer safes sagas sager sages sahib sails saint saith salad sales salon salsa salts salty salve salvo samba sames sands sandy saner sappy saree saris sassy satay sated sates satyr sauce saucy sauna sauté saved saver saves savor savvy sawed saxes scabs scads scags scald scale scalp scaly scamp scams scans scant scare scarf scars scary scats scene scent schwa scion scoff scold scone scoop scoot scope score scorn scour scout scowl scows scram scrap screw scrip scrod scrog scrub scuba scuds scuff scull scums scurf seals seams seamy sears seats sects sedan sedge seeds seedy seeks seems seeps seers segue seize sells semen semis sends senna sense sepal sepia septa serer serfs serge serum serve servo setup seven sever sewed sewer sexed sexes shack shade shads shady shaft shags shahs shake shaky shall shalt shame shams shank shape shard share shark sharp shave shawl sheaf shear sheds sheen sheep sheer sheet sheik shelf shell sherd shied shies shift shill shims shine shins shiny ships shire shirk shirr shirt shits shlep shoal shock shoed shoes shone shook shoon shoos shoot shops shore shorn short shots shout shove shown shows showy shred shrew shrub shrug shtik shuck shuns shunt shush shuts shyer shyly sibyl sicks sided sides sidle siege sieve sifts sighs sight sigma signs silks silky sills silly silos silts since sinew singe sings sinks sinus sired siren sires sirup sisal sises sissy sitar sited sites sixes sixth sixty sized sizer sizes skate skeet skein skews skids skied skier skies skiff skill skimp skims skins skips skirt skits skulk skull skunk skyed slabs slack slags slain slake slams slang slant slaps slash slate slats slave slays sleds sleek sleet slept slews slice slick slide slier slily slime slims slimy sling slink slips slits slobs sloes slogs sloop slope slops slosh sloth slots slows slued slues slugs slump slums slung slunk slurp slurs slush sluts slyer slyly smack small smart smash smear smell smelt smile smirk smite smith smock smoke smoky smote smurf smuts snack snafu snags snail snake snaky snaps snare snarf snark snarl sneak sneer snide sniff snipe snips snits snobs snoop snoot snore snort snots snout snows snowy snubs snuck snuff snugs soaks soaps soapy soars sober socks sodas sofas softy soggy soils solar soled soles solid solos solve sonar songs sonic sonny sooth sooty soppy sorer sores sorta sorts sough souls sound soups soupy sours souse south sowed sower space spacy spade spake spams spank spans spare spark spars spasm spate spats spawn spays speak spear speck specs speed spell spelt spend spent sperm spews spice spicy spied spiel spies spike spiky spill spilt spine spins spiny spire spite splat splay split spoil spoke spoof spook spool spoon spoor spore sport spout sprat spray spree sprig spuds spume spunk spurn spurs spurt squab squad squat squaw squid stabs stack staff stage stags staid stain stair stake stale stalk stall stamp stand stank staph stare stark stars start stash state stats stave stays stdio stead steak steal steam steed steel steep steer stein stems stent steps stern stews stick sties stiff stile still stilt sting stink stint stirs stoat stock stoic stoke stole stomp stone stony stood stool stoop stops store stork storm story stout stove stows strap straw stray strep strew strip strop strum strut stubs stuck studs study stuff stump stung stunk stuns stunt styes style styli suave sucks sudsy suede sugar suite suits sulks sulky sully sumac sumps sunny sunup super surer surfs surge surly sushi swabs swags swain swami swamp swank swans swaps sward swarm swash swath swats sways swear sweat sweep sweet swell swept swift swigs swill swims swine swing swipe swirl swish swoon swoop swops sword swore sworn swung sylph synch syncs synod syrup sysop tabby table taboo tabus tacit tacks tacky tacos taffy tails taint taken taker takes tales talks tally talon tamed tamer tames tamps tango tangs tangy tanks tansy taped taper tapes tapir tardy tared tares taros tarot tarps tarts taser tasks taste tasty tatty taunt taupe tawny taxed taxes taxis teach teaks teals teams tears teary tease teats techs teems teens teeny teeth telex tells tempi tempo temps tempt tends tenet tenon tenor tense tenth tents tepee tepid terms terns terry terse tests testy texts thank thaws thees theft their theme there these theta thick thief thigh thine thing think thins third thong thorn those thous three threw throb throe throw thrum thuds thugs thumb thump thunk thyme thymi tiara tibia ticks tidal tided tides tiers tight tikes tilde tiled tiles tills tilts timed times timid tines tinge tings tinny tints tipis tipsy tired tires tiros titan tithe title tizzy toads toady toast today toddy toffy togae togas toils toked token tokes tolls tombs tomes tonal toned toner tones tongs tonic tonne tools tooth toots topaz topic toque torch torsi torso torte torts torus total toted totem totes tough tours touts towed towel tower towns toxic toxin toyed trace track tract trade trail train trait tramp trams trans traps trash trawl trays tread treas treat treed trees treks trend tress triad trial tribe trice trick tried tries trike trill trims trios tripe trips trite troll tromp trons troop trope troth trots trout troys truce truck trued truer trues truly trump trunk truss trust truth tryst tsars tubas tubby tubed tuber tubes tucks tufts tulip tulle tumid tummy tumor tunas tuned tuner tunes tunic tunny turds turfs turns tusks tutor tutus tuxes twain twang tweak tweed tweet twerk twerp twice twigs twill twine twink twins twirl twist twits tying tykes typed types typos tyros tzars udder ulcer ulnae ulnas ultra umbel umber umiak umped unbar uncle uncut under undid undue unfit unify union unite units unity unman unpin unsay unset untie until unwed unzip upend upped upper upset urban urged urges urine usage users usher using usual usurp usury uteri utter uvula vacua vague vales valet valid valor value valve vamps vanes vaped vapes vapid vapor vases vasts vault vaunt veeps veers vegan veils veins velds veldt venal vends venom vents venue verbs verge verse verve vests vetch vexed vexes vials viand vibes vicar viced vices video views vigil vigor viler villa vines vinyl viola viols viper viral vireo virus visas vised vises visit visor vista vital vivas vixen vizor vocal vodka vogue voice voids voile voles volts vomit voted voter votes vouch vowed vowel vulva vying wacko wacks wacky waded wader wades wadis wafer wafts waged wager wages wagon waifs wails waist waits waive waked waken wakes waldo waled wales walks walls waltz wands waned wanes wanks wanly wanna wants wards wares warez warms warns warps warts warty wasps waste watch water watts waved waver waves waxed waxen waxes weals weans wears weary weave wedge weeds weedy weeks weeps weepy weest wefts weigh weird weirs welch welds wells welsh welts wench wends wetly whack whale whams wharf whats wheal wheat whelk whelp whens where whets which whiff while whims whine whiny whips whirl whirr whirs whisk whist white whits whizz whole whoop whore whorl whose wicks widen wider widow width wield wight wikis wilds wiled wiles wills wilts wimps wimpy wince winch winds windy wined wines wings winks winos wiped wiper wipes wired wires wiser wises wisps wispy witch witty wives wizes woken woman women wonky woods woody wooed wooer woofs wooly woozy words wordy works world worms wormy worry worse worst worth would wound woven wowed wrack wraps wrapt wrath wreak wreck wrens wrest wrier wring wrist write writs wrong wrote wroth wrung wryer wryly xenon xrefs xterm xylem yacht yacks yahoo yanks yards yarns yawed yawls yawns yeahs yearn years yeast yells yelps yeses yield yocks yodel yogin yogis yoked yokel yokes yolks young yours youth yowls yucca yucks yucky yummy yuppy zebra zebus zeros zests zilch zincs zings zippy zombi zonal zoned zones zooms zorch éclat épées étude'.split(' ');
+
+const DICT = new Set([...W4,...W5]);
+
+/* ═══════════════════════════════════════
+   WORD HINTS
+═══════════════════════════════════════ */
+const WCAT={};
+(function(){
+const C={
+EMO:'love hate fear hope rage calm pain hurt care fond dear wild free bold kind warm cold hard soft feel soul mood ache ease glad grim keen lost meek mild nice proud rash vain wise wary anger grief shame guilt pride wrath mercy lust envy brave cruel sweet bitter sorrow desire bliss zeal fury pity happy jolly merry sorry angry upset tense eager avid awed trust faith timid tender gentle harsh stern rough tough sharp loyal false noble vile base mean fair just sulky moody giddy yearn crave mourn weep wail sigh adore loathe humble alone aloof apart',
+NAT:'fire rain wind snow moon star tree rose wave tide rock mist dawn dusk dust leaf seed root vine fog hail frost storm flood cloud earth grass stone sand soil salt iron gold coal clay wood bark moss oak thorn bloom petal gale haze gust blaze ember flame crest grove marsh plain ridge vale shore cliff bank glen moor pond lake reef river brook creek field meadow forest desert hill slope peak gorge canyon beach cave pool sky twilight midnight sunrise sunset pebble boulder gravel twig branch trunk canopy hedge bud sprout thunder lightning rainbow aurora ocean coral amber quartz crystal flint slate chalk granite marble topaz ruby pearl solar lunar cosmic comet meteor eclipse swamp bog estuary fjord atoll dune lava delta oasis tundra mesa butte fen heath knoll bluff crag scree willow birch beech cedar maple holly yew pine fir elm ash larch hazel',
+ANI:'bird wolf lion bear deer fish frog snake eagle hawk dove crow owl wren robin finch heron hound stag boar bull calf foal lamb fawn pup cub tiger shark whale dolphin seal otter beaver mole vole mouse rat horse pony mule ox cow pig goat sheep cat dog rabbit hare squirrel badger fox cobra gecko moth butterfly beetle wasp bee ant fly worm slug snail bison moose elk raven starling pigeon trout salmon herring mackerel cod bass parrot flamingo pelican stork crane gorilla chimp baboon lemur camel zebra giraffe rhino hippo iguana chameleon oyster clam mussel newt toad viper adder swift kite buzzard falcon osprey crab prawn shrimp lobster squid panda koala sloth panther jaguar leopard cheetah lynx',
+BOD:'hand face bone skin heart hair eye lip arm leg foot back neck chest blood tear spine palm wrist ankle elbow thumb shin brow cheek chin brain nerve vein lung liver knee hip rib gut fist knuckle finger nail toe heel skull temple ear jaw beard belly navel waist flank loin thigh pulse breath sweat blush scar bruise wound voice smile frown grin wink blink limp grasp clutch pinch squeeze stroke caress whisper murmur shout scream yell',
+MOV:'flow leap soar dive swim rise fall roll spin rush dash race walk roam drift float sink drop climb crawl slide glide swing sway dance bound skip bolt flee chase hunt stalk prowl surge sweep swoop wheel coast skim turn march stomp plod trudge amble stroll wander creep sneak skulk slink lurk gallop trot canter lope pounce spring hurtle plunge tumble topple pitch lurch reel flutter flap hover dart flit wade splash whirl twirl gyrate rotate bob dip lunge thrust jab stab slash hack curl coil twist scatter gather swarm flock advance retreat recoil launch hurl fling toss throw cast drag haul heave push shove thrust nudge weave trail follow chase guide lead steer pilot carry bear ferry convey shift propel eject attract draw pull tug yank wrench swerve veer bank tilt lean skid reel rock',
+TIM:'time hour year past dawn dusk age soon late long brief fast slow once next last ever epoch phase cycle term span era period second minute month decade today yesterday morning evening night noon spring summer autumn winter early ancient modern recent fleeting eternal delay pause lapse begin start arise emerge cease stop finish expire youth prime elder senior',
+OBJ:'door ring book coin key bell drum harp pipe lock hook rope cord bond knot link chain blade sword crown lamp torch wall gate arch dome vault seal mask veil robe cloak helm shield staff wand orb tome scroll map cup bowl cage desk shelf chest drawer chair table bench stool throne knife fork spoon plate dish mug jug flask vase urn pot pan axe spade hoe rake pick shovel wheel gear lever pulley mirror window shutter blind curtain latch bolt hinge clasp frame crate barrel keg sack pouch purse wallet badge medal crest token candle lantern needle pin nail screw wire string thread yarn lens dial gauge clock watch compass chart globe sphere prism funnel valve wedge peg stake pillar column arch pew altar',
+COL:'blue gold grey pink teal jade ruby amber ivory ebony scarlet crimson violet indigo azure aqua cyan black white red green brown yellow orange purple lilac lavender dark pale vivid dull faded rosy ruddy sallow ashen pallid lustrous gleaming opalescent ochre sienna umber sepia beige cream maroon burgundy wine khaki olive sage forest emerald silver bronze copper brass pewter russet auburn chestnut raven pitch sable flaxen tawny dun wan',
+LIT:'glow shine light beam ray gleam glint spark flash blaze flare shimmer twinkle glimmer flicker bright dark shade shadow dim murky gloom radiant luminous halo aura corona candle lantern torch lamp beacon blind dazzle pale vivid crisp clear hazy blurred unlit shadowed transparent sheer opaque iridescent effulgent incandescent illuminate brighten darken fade blur obscure veil shroud cloak expose reveal',
+SND:'ring bell chime toll peal clang clank clatter rattle thud thump bang crash boom roar rumble thunder whisper murmur rustle hiss shout yell scream shriek howl wail moan groan hum drone buzz purr throb beat click snap crack pop tinkle jingle clink melody tune chord note pitch tone rhythm tempo echo silence quiet calm hush lull creak squeak screech splash gurgle trickle ripple babble drum strum voice song chant hymn chorus laugh giggle chuckle snarl growl bark howl yelp whimper',
+PLC:'home land road path town hall tower bridge house room floor roof street alley lane park garden church castle palace manor lodge cottage hut barn market square arena harbour port quay dock pier station school library museum gallery theatre cellar vault dungeon attic field meadow pasture orchard mountain valley plain cliff coast border gateway north south east west upper lower inner outer',
+FOD:'bread wine fruit meat fish salt sugar honey feast meal dish apple pear plum grape lemon cherry peach wheat grain flour herb spice pepper ginger butter cream cheese milk broth soup stew roast sweet sour bitter salty savour taste hunger thirst appetite craving ripe fresh stale',
+THT:'mind wise truth lore myth tale word name sign code clue hint plan plot ruse trick spell charm hex omen rune jest riddle logic reason dream imagine ponder muse wonder doubt question seek probe learn grasp fathom recall idea notion concept theory premise judge weigh reckon believe suspect guess decide choose prefer invent create devise reveal conceal hide mask symbol icon vision secret known hidden conscious aware awake',
+};
+Object.entries(C).forEach(([cat,str])=>str.split(' ').forEach(w=>{if(w&&!WCAT[w])WCAT[w]=cat;}));
+})();
+
+const HINTS={
+EMO:[
+  "I sense an internal world here… something felt rather than seen or held. The word belongs to the private country of the emotions.",
+  "A quality of feeling reaches me… neither an object nor a place, but something closer to the self. Whatever this word is, it has warmth or weight to it.",
+  "This word lives inside people, not in the world outside. I sense something about how we are — how we feel, what we carry.",
+],
+NAT:[
+  "My mind moves outward — I am drawn to open sky, to earth and water. Something from the natural world is taking shape here.",
+  "Something calls to me from beyond the walls of rooms and cities. The word has roots in the outdoors — in weather, landscape, or the living earth.",
+  "I sense air, or stone, or water. Something that existed long before language came along to name it.",
+],
+ANI:[
+  "A living creature stirs in my awareness — something with a heartbeat and instincts, a creature of the natural world.",
+  "I sense movement of a particular kind — purposeful, animal. Something with form and habit and its own way of moving through the world.",
+  "The word is alive. Not a person — something older and wilder than that.",
+],
+BOD:[
+  "The human form comes to me — something physical, something we all carry with us and rarely think about.",
+  "A part of the body, or something the body does. The word is intimate — it touches on the physical self.",
+  "I sense flesh and form. The word is close to us — literally, bodily close.",
+],
+MOV:[
+  "There is energy here — motion, direction. The word refuses to stay still. Something is going somewhere.",
+  "I sense a kind of action — purposeful, physical. Something that describes how things move through space.",
+  "The word is not a thing but a doing. Not a noun but a verb. Something in motion.",
+],
+TIM:[
+  "Time speaks to me from this word — a moment, a duration, a season. Something measured by the clock or the calendar.",
+  "The word has something of the passing hour about it. Fleeting, or long, or cyclical — but always concerned with time.",
+  "I sense before and after. The word belongs to the dimension we cannot step outside.",
+],
+OBJ:[
+  "Something tangible forms before me — a thing with weight and edges, that occupies space in the world. An object.",
+  "I sense a made thing — crafted, held, used. The word names something physical that exists apart from us.",
+  "The word is a noun of the most concrete kind. Something you could pick up, carry, or leave behind.",
+],
+COL:[
+  "A colour or quality of appearance reaches me — something visual, something seen rather than touched or heard.",
+  "I sense light in this word — the way something looks, its tone or shade or quality of surface.",
+  "The word has a visual character. Colour, perhaps, or luminance, or the particular look of something.",
+],
+LIT:[
+  "Light and shadow move at the edge of this word — something to do with brightness or its absence.",
+  "I sense illumination — or the lack of it. The word concerns itself with how things appear in light.",
+  "Something luminous — or its opposite. The word lives in the interplay of brightness and dark.",
+],
+SND:[
+  "Sound reaches me from this word — a tone, a rhythm, a voice of some kind. The word has an acoustic quality.",
+  "I hear something. The word belongs to the world of sound — whether music, noise, speech, or silence.",
+  "The word is auditory. Something struck, or spoken, or heard in the distance.",
+],
+PLC:[
+  "A sense of place arrives — somewhere specific, or a kind of location. The word has geography in it.",
+  "I sense a where rather than a what or a how. The word belongs to place — a location, a space, a direction.",
+  "The word maps somewhere. A building, a landscape, a region, or a position in space.",
+],
+FOD:[
+  "Something nourishing comes to mind — the word belongs to the pleasures of eating and drinking.",
+  "I sense taste or appetite. The word has something to do with food, or drink, or the hunger for them.",
+  "The word nourishes. It belongs to the kitchen, the table, or the field where things are grown.",
+],
+THT:[
+  "The thinking part of things — this word concerns itself with the life of the mind. Knowledge, perhaps, or mystery.",
+  "I sense intelligence at work in this word. Something planned, conceived, hidden, or revealed.",
+  "The word belongs to thought rather than sensation. Ideas, intentions, secrets — something conceived before it is acted on.",
+],
+_:[
+  "Something is forming… I sense its particular weight, its texture. It resists at first — as though reluctant to be known. But it is becoming clear to me.",
+  "A shape takes form at the edge of my perception… the word is present but not yet fully resolved. I am reaching for it.",
+  "I cannot name the category yet — but the word has a distinct character. Something particular, something yours. It is coming.",
+  "The impression is strong but elusive… like catching a scent before the source is visible. The word is close.",
+  "Something stirs in the space between your mind and mine. I am reading it now — let me focus.",
+  "Not every word announces itself clearly. This one holds its ground. But I sense its outline, and I am drawing nearer.",
+],
+};
+
+function getHint(w){
+  const cat=WCAT[w]||'_';
+  const arr=HINTS[cat];
+  /* choose phrase consistently for this word but vary across words */
+  const idx=(w.charCodeAt(0)+w.charCodeAt(w.length-1)+w.length)%arr.length;
+  return arr[idx];
+}
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+let S={phase:'setup',wlen:4,rot:0,recs:[],rnd:0,dragging:false,prevAngle:0};
+let drone=null;
+let DIAM=500; // will be calculated
+
+/* ═══════════════════════════════════════
+   DIAL SIZE — responsive
+═══════════════════════════════════════ */
+function calcDiam(){
+  const isMobile=window.innerWidth<=800;
+  if(isMobile){
+    DIAM=Math.min(window.innerWidth-40,320);
+  } else {
+    const col=Math.floor(window.innerWidth/2);
+    DIAM=Math.min(col-80,520);
+    DIAM=Math.max(DIAM,340);
+  }
+  return DIAM;
+}
+
+function resizeDial(){
+  calcDiam();
+  const cv=document.getElementById('main-dial');
+  cv.width=DIAM; cv.height=DIAM;
+  cv.style.width=DIAM+'px'; cv.style.height=DIAM+'px';
+  drawDial('main-dial',S.rot,null);
+}
+
+/* ═══════════════════════════════════════
+   WEB AUDIO
+═══════════════════════════════════════ */
+let AC=null;
+function ac(){
+  if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();
+  if(AC.state==='suspended')AC.resume();
+  return AC;
+}
+function startDrone(){
+  const a=ac(),now=a.currentTime;
+  const master=a.createGain();master.gain.setValueAtTime(0,now);
+  master.gain.linearRampToValueAtTime(0.13,now+2.5);
+  master.connect(a.destination);
+  const rev=a.createDelay(0.5);rev.delayTime.value=0.38;
+  const revFb=a.createGain();revFb.gain.value=0.28;
+  const revMix=a.createGain();revMix.gain.value=0.3;
+  rev.connect(revFb);revFb.connect(rev);rev.connect(revMix);revMix.connect(master);
+  const sub=a.createOscillator();sub.type='sine';sub.frequency.value=55;
+  const subG=a.createGain();subG.gain.value=0.5;
+  sub.connect(subG);subG.connect(master);subG.connect(rev);sub.start();
+  const fifth=a.createOscillator();fifth.type='sine';fifth.frequency.value=82.4;
+  const fifthG=a.createGain();fifthG.gain.value=0.22;
+  fifth.connect(fifthG);fifthG.connect(master);fifthG.connect(rev);fifth.start();
+  const upper=a.createOscillator();upper.type='sine';upper.frequency.value=165.2;
+  const upperG=a.createGain();upperG.gain.value=0.10;
+  upper.connect(upperG);upperG.connect(master);upper.start();
+  const lfo=a.createOscillator();lfo.type='sine';lfo.frequency.value=0.18;
+  const lfoG=a.createGain();lfoG.gain.value=0.04;
+  lfo.connect(lfoG);lfoG.connect(subG.gain);lfo.start();
+  const lfo2=a.createOscillator();lfo2.type='sine';lfo2.frequency.value=0.07;
+  const lfo2G=a.createGain();lfo2G.gain.value=0.8;
+  lfo2.connect(lfo2G);lfo2G.connect(upper.frequency);lfo2.start();
+  const flt=a.createBiquadFilter();flt.type='lowpass';flt.frequency.value=520;flt.Q.value=1.8;
+  subG.connect(flt);flt.connect(master);
+  return{master,sub,fifth,upper,lfo,lfo2};
+}
+function stopDrone(d,ft){
+  if(!d)return;
+  const a=ac(),now=a.currentTime;
+  d.master.gain.setValueAtTime(d.master.gain.value,now);
+  d.master.gain.linearRampToValueAtTime(0,now+ft);
+  setTimeout(()=>{try{d.sub.stop();d.fifth.stop();d.upper.stop();d.lfo.stop();d.lfo2.stop();}catch(e){};},(ft+0.2)*1000);
+}
+function playChip(){
+  /* crisp chip/card-snap click sound */
+  const a=ac(),now=a.currentTime;
+  /* white noise burst */
+  const bufLen=a.sampleRate*0.04;
+  const buf=a.createBuffer(1,bufLen,a.sampleRate);
+  const data=buf.getChannelData(0);
+  for(let i=0;i<bufLen;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/bufLen,3);
+  const src=a.createBufferSource(); src.buffer=buf;
+  /* bandpass filter — give it a mid-frequency click character */
+  const bp=a.createBiquadFilter(); bp.type='bandpass';
+  bp.frequency.value=2400; bp.Q.value=1.2;
+  const g=a.createGain(); g.gain.setValueAtTime(0,now);
+  g.gain.linearRampToValueAtTime(0.55,now+0.003);
+  g.gain.exponentialRampToValueAtTime(0.001,now+0.08);
+  src.connect(bp); bp.connect(g); g.connect(a.destination);
+  src.start(now); src.stop(now+0.09);
+  /* add a brief low thump for body */
+  const osc=a.createOscillator(),og=a.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(180,now);
+  osc.frequency.exponentialRampToValueAtTime(60,now+0.06);
+  og.gain.setValueAtTime(0,now);
+  og.gain.linearRampToValueAtTime(0.3,now+0.004);
+  og.gain.exponentialRampToValueAtTime(0.001,now+0.07);
+  osc.connect(og); og.connect(a.destination);
+  osc.start(now); osc.stop(now+0.08);
+}
+
+function playChime(freq,vol=0.12,dur=2.2){
+  const a=ac(),now=a.currentTime;
+  const osc=a.createOscillator(),g=a.createGain();
+  osc.type='sine';osc.frequency.value=freq;
+  g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(vol,now+0.01);
+  g.gain.exponentialRampToValueAtTime(0.001,now+dur);
+  osc.connect(g);g.connect(a.destination);osc.start();osc.stop(now+dur+0.1);
+}
+function playHarmonic(freqs,vols,dur=2.8){freqs.forEach((f,i)=>playChime(f,vols[i]||0.08,dur));}
+function playSwell(){
+  const a=ac(),now=a.currentTime;
+  [[110,.08],[138.6,.07],[165,.09],[220,.07],[277.2,.06],[330,.05]].forEach(([f,v],i)=>{
+    const osc=a.createOscillator(),g=a.createGain();
+    osc.type='sine';osc.frequency.value=f;
+    const t=now+i*0.22;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+0.4);
+    g.gain.linearRampToValueAtTime(v*0.7,t+1.6);g.gain.linearRampToValueAtTime(0.001,t+3.5);
+    osc.connect(g);g.connect(a.destination);osc.start(t);osc.stop(t+4);
+  });
+}
+function playBell(freq=440){
+  const a=ac(),now=a.currentTime;
+  [[1,.22],[2.756,.10],[5.404,.05],[8.1,.03]].forEach(([ratio,v])=>{
+    const osc=a.createOscillator(),g=a.createGain();
+    osc.type='sine';osc.frequency.value=freq*ratio;
+    g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(v,now+0.006);
+    g.gain.exponentialRampToValueAtTime(0.001,now+5.5);
+    osc.connect(g);g.connect(a.destination);osc.start();osc.stop(now+6);
+  });
+}
+
+/* ═══════════════════════════════════════
+   DRAW DIAL
+═══════════════════════════════════════ */
+function drawDial(id,rot,overlay){
+  const cv=document.getElementById(id);if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height,CX=W/2,CY=H/2;
+  ctx.clearRect(0,0,W,H);
+
+  /* ── Casino felt palette ── */
+  const feltDark  ='#0d2210';   /* outer plate / deep felt */
+  const feltMid   ='#143818';   /* letter band */
+  const feltLight ='#1c5020';   /* card band lighter felt */
+  const feltBright='#246028';   /* centre disc */
+  const borderGold='rgba(180,150,40,0.70)';
+  const borderDim ='rgba(120,100,20,0.35)';
+  const letterCol ='#f8f0c8';   /* cream-yellow — high contrast on green */
+  const cardRed   ='#e83030';
+  const cardBlack ='#f0ecf8';
+  const feltLine  ='rgba(255,255,255,0.07)';
+
+  const R     = W/2 - 2;
+  const lO    = R - 1;
+  const lI    = R * 0.795;
+  const zO    = lI - R*0.018;
+  const zI    = R * 0.30;
+  const cR    = zI - R*0.035;
+
+  /* ── outer plate — deep felt green ── */
+  const bgG=ctx.createRadialGradient(CX,CY,0,CX,CY,R);
+  bgG.addColorStop(0,'#1a4020');
+  bgG.addColorStop(0.55,'#0f2812');
+  bgG.addColorStop(1,'#07160a');
+  ctx.beginPath();ctx.arc(CX,CY,R+1,0,Math.PI*2);ctx.fillStyle=bgG;ctx.fill();
+
+  /* ── letter band — mid felt ── */
+  ctx.save();
+  ctx.beginPath();ctx.arc(CX,CY,lO,0,Math.PI*2);ctx.arc(CX,CY,lI,0,Math.PI*2,true);
+  ctx.fillStyle=feltMid;ctx.fill();ctx.restore();
+
+  /* ticks */
+  for(let i=0;i<52;i++){
+    const ang=i*(360/52)*Math.PI/180,big=i%2===0,r0=lO-(big?R*.055:R*.025);
+    ctx.beginPath();
+    ctx.moveTo(CX+r0*Math.sin(ang),CY-r0*Math.cos(ang));
+    ctx.lineTo(CX+lO*Math.sin(ang),CY-lO*Math.cos(ang));
+    ctx.strokeStyle=big?borderGold:borderDim;ctx.lineWidth=big?.8:.3;ctx.stroke();
+  }
+
+  /* ring borders */
+  ctx.beginPath();ctx.arc(CX,CY,lO,0,Math.PI*2);
+  ctx.strokeStyle=borderGold;ctx.lineWidth=1.2;ctx.stroke();
+  ctx.beginPath();ctx.arc(CX,CY,lI,0,Math.PI*2);
+  ctx.strokeStyle=borderGold;ctx.lineWidth=0.8;ctx.stroke();
+
+  /* alphabet — large, bright, maximum contrast */
+  const lR=(lO+lI)/2;
+  const letterFS=Math.max(Math.round(R*0.088),10);
+  for(let j=0;j<26;j++){
+    const rad=(j*360/26-90)*Math.PI/180;
+    ctx.save();
+    ctx.translate(CX+lR*Math.cos(rad),CY+lR*Math.sin(rad));
+    ctx.rotate(rad+Math.PI/2);
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=`700 ${letterFS}px "Cinzel",serif`;
+    ctx.fillStyle=letterCol;ctx.globalAlpha=1;
+    ctx.fillText(ABC[j],0,0);ctx.restore();
+  }
+
+  /* pointer — outside letter ring, pointing inward, gold triangle */
+  ctx.save();
+  const ptOuter=lO+R*.045, ptTip=lO-R*.02;
+  ctx.beginPath();
+  ctx.moveTo(CX-R*.03, CY-ptOuter);
+  ctx.lineTo(CX,        CY-ptTip);
+  ctx.lineTo(CX+R*.03, CY-ptOuter);
+  ctx.closePath();
+  ctx.fillStyle='#e8c840';ctx.globalAlpha=1;ctx.fill();
+  ctx.strokeStyle='#a08820';ctx.lineWidth=.8;ctx.stroke();
+  ctx.restore();
+
+  /* ── ROTATING CARD DISC ── */
+  ctx.save();ctx.translate(CX,CY);ctx.rotate(rot*Math.PI/180);
+
+  /* card band background — lighter felt green */
+  const dG=ctx.createRadialGradient(0,0,0,0,0,zO);
+  dG.addColorStop(0,'#2a6030');
+  dG.addColorStop(0.5,'#1e4822');
+  dG.addColorStop(1,'#143018');
+  ctx.beginPath();ctx.arc(0,0,zO,0,Math.PI*2);ctx.fillStyle=dG;ctx.fill();
+
+  /* alternating segment tints — subtle light/dark felt */
+  const SEG=360/26;
+  for(let i=0;i<26;i++){
+    const a1=(i*SEG-90)*Math.PI/180,a2=((i+1)*SEG-90)*Math.PI/180;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,zO,a1,a2);ctx.closePath();
+    ctx.fillStyle=i%2===0?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)';ctx.fill();
+  }
+
+  /* dividers */
+  for(let i=0;i<26;i++){
+    const a=(i*SEG-90)*Math.PI/180;
+    ctx.beginPath();
+    ctx.moveTo(zI*Math.cos(a),zI*Math.sin(a));
+    ctx.lineTo(zO*Math.cos(a),zO*Math.sin(a));
+    ctx.strokeStyle='rgba(180,150,40,0.30)';ctx.lineWidth=.5;ctx.stroke();
+  }
+
+  /* card labels — moved OUTWARD to 78% of band (near letter ring edge) */
+  const cardR = zI+(zO-zI)*0.78;
+  const valFS = Math.max(Math.round(R*0.064),8);
+
+  for(let i=0;i<26;i++){
+    const mid=((i*SEG + SEG/2)-90)*Math.PI/180;
+    const card=CARDS[i];
+    const suit=card.slice(-1);
+    const val=card.slice(0,-1);
+    const isRed=(suit==='♥'||suit==='♦');
+    const col=isRed?cardRed:cardBlack;
+
+    ctx.save();
+    ctx.translate(cardR*Math.cos(mid),cardR*Math.sin(mid));
+    ctx.rotate(mid+Math.PI/2);
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=col;ctx.globalAlpha=1;
+
+    ctx.font=`700 ${valFS}px "Cinzel",serif`;
+    const valW=ctx.measureText(val).width;
+    ctx.font=`${valFS+2}px serif`;
+    const suitW=ctx.measureText(suit).width;
+    const totalW=valW+suitW+1;
+    const startX=-totalW/2;
+
+    ctx.font=`700 ${valFS}px "Cinzel",serif`;
+    ctx.fillText(val, startX+valW/2, 0);
+    ctx.font=`${valFS+2}px serif`;
+    ctx.fillText(suit, startX+valW+suitW/2+1, 0);
+    ctx.restore();
+  }
+
+  /* band borders */
+  ctx.beginPath();ctx.arc(0,0,zO,0,Math.PI*2);
+  ctx.strokeStyle=borderGold;ctx.lineWidth=.8;ctx.stroke();
+  ctx.beginPath();ctx.arc(0,0,zI,0,Math.PI*2);
+  ctx.strokeStyle=borderGold;ctx.lineWidth=.6;ctx.stroke();
+  ctx.restore();
+
+  /* ── CENTRE DISC — bright felt ── */
+  const cG=ctx.createRadialGradient(CX-R*.04,CY-R*.04,0,CX,CY,cR);
+  cG.addColorStop(0,'#2e6834');
+  cG.addColorStop(1,'#183a1c');
+  ctx.beginPath();ctx.arc(CX,CY,cR,0,Math.PI*2);ctx.fillStyle=cG;ctx.fill();
+  ctx.strokeStyle=borderGold;ctx.lineWidth=.8;ctx.stroke();
+  ctx.beginPath();ctx.arc(CX,CY,cR*0.86,0,Math.PI*2);
+  ctx.strokeStyle='rgba(180,150,40,0.18)';ctx.lineWidth=.5;ctx.stroke();
+
+  /* centre content */
+  if(overlay&&overlay.type==='think'){
+    const n=1+Math.floor(overlay.t*18)%3;
+    ctx.font=`400 ${Math.round(R*0.065)}px "Cormorant Garamond",serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#a0d090';ctx.globalAlpha=.85;
+    ctx.fillText('· '.repeat(n).trim(),CX,CY);ctx.globalAlpha=1;
+  } else if(overlay&&overlay.type==='word'){
+    const w=overlay.word.toUpperCase();
+    const fs=w.length<=4?Math.round(R*0.16):Math.round(R*0.12);
+    ctx.font=`700 ${fs}px "Cinzel",serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#f8f060';ctx.globalAlpha=overlay.alpha||1;
+    ctx.fillText(w,CX,CY);ctx.globalAlpha=1;
+  } else {
+    ctx.font=`${Math.round(R*0.09)}px serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#80c060';ctx.globalAlpha=.45;
+    ctx.fillText('✦',CX,CY);ctx.globalAlpha=1;
+  }
+}
+
+/* ═══════════════════════════════════════
+   DECODE
+═══════════════════════════════════════ */
+function letterAt(ci,rotDeg){
+  const a=(((ci+0.5)*(360/26)+rotDeg)%360+360)%360;
+  return Math.round(a*26/360)%26;
+}
+function decode(){
+  /* Pass 1: exact match — no tolerance, card index is precise */
+  for(let s=0;s<26;s++){
+    const w=S.recs.map(r=>(letterAt(s,r)%26)).map(l=>ABC[l].toLowerCase()).join('');
+    if(DICT.has(w))return{word:w,card:s};
+  }
+  /* Pass 2: ±1 tolerance for slight misalignment, corrected card index */
+  for(let s=0;s<26;s++){
+    for(let off of[-1,1]){
+      const w=S.recs.map(r=>((letterAt(s,r)+off+26)%26)).map(l=>ABC[l].toLowerCase()).join('');
+      if(DICT.has(w))return{word:w,card:(s+off+26)%26};
+    }
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════ */
+function showPhase(id){
+  document.querySelectorAll('.phase').forEach(p=>p.classList.toggle('on',p.id===id));
+}
+function buildDots(){
+  const de=document.getElementById('tw-dots');de.innerHTML='';
+  for(let i=0;i<S.wlen;i++){
+    const d=document.createElement('div');
+    d.className='dot'+(i===0?' curr':'');
+    d.id='dot-'+i;d.textContent=i+1;de.appendChild(d);
+  }
+}
+function updateStep(){
+  const el=document.getElementById('step-txt');
+  if(el)el.innerHTML=`Rotate the inner ring until your zodiac sign points to the <em>${ORD[S.rnd]} letter</em> of your word, then press <em>Confirm letter</em>.`;
+}
+function addMsg(html,cls){
+  const ma=document.getElementById('msg-area');
+  const p=document.createElement('p');
+  p.className='msg'+(cls?' '+cls:'');
+  p.innerHTML=html;ma.appendChild(p);
+  setTimeout(()=>p.scrollIntoView({behavior:'smooth',block:'nearest'}),80);
+}
+
+/* ═══════════════════════════════════════
+   START / CONFIRM
+═══════════════════════════════════════ */
+function start(len){
+  if(drone){stopDrone(drone,0.3);drone=null;}
+  S={phase:'spell',wlen:len,rot:0,recs:[],rnd:0,dragging:false,prevAngle:0};
+  buildDots();updateStep();
+  showPhase('ph-spell');
+  drawDial('main-dial',0,null);
+}
+function confirm(){
+  /* sound + visual feedback */
+  try{ playChip(); }catch(e){}
+  const btn=document.getElementById('btn-confirm');
+  if(btn){
+    btn.classList.add('btn-confirm-flash');
+    btn.addEventListener('animationend',()=>btn.classList.remove('btn-confirm-flash'),{once:true});
+  }
+  S.recs.push(S.rot);
+  const d=document.getElementById('dot-'+S.rnd);
+  if(d){d.classList.remove('curr');d.classList.add('done');}
+  S.rnd++;
+  if(S.rnd>=S.wlen){doReveal();return;}
+  const n=document.getElementById('dot-'+S.rnd);
+  if(n)n.classList.add('curr');
+  updateStep();
+}
+
+/* ═══════════════════════════════════════
+   REVEAL
+═══════════════════════════════════════ */
+function doReveal(){
+  showPhase('ph-reveal');
+  document.getElementById('msg-area').innerHTML='';
+  document.getElementById('btn-reset').style.display='none';
+  try{drone=startDrone();}catch(e){drone=null;}
+  const result=decode();
+  const t0=Date.now(),THINK=3000;
+  function thinkLoop(){
+    const t=Math.min((Date.now()-t0)/THINK,1);
+    drawDial('main-dial',S.rot,{type:'think',t});
+    if(t<1){requestAnimationFrame(thinkLoop);return;}
+    runSequence(result);
+  }
+  requestAnimationFrame(thinkLoop);
+}
+
+function runSequence(result){
+  const btn=document.getElementById('btn-reset');
+  if(!result){
+    stopDrone(drone,2);drone=null;
+    drawDial('main-dial',S.rot,null);
+    addMsg('The vision remains unclear… please try again with a more common word.','coda');
+    if(btn)btn.style.display='';return;
+  }
+  const{word,card}=result;
+  const cardName=CNAMES[card];
+  const cardShort=CARDS[card];
+  const hint=getHint(word);
+
+  const steps=[
+    {at:0,fn:()=>{
+      addMsg('Thank you.','');
+      playChime(523.25,.10,2.0);
+    }},
+    {at:2800,fn:()=>{
+      addMsg('Let me think for a moment…','');
+      playHarmonic([392,523.25],[.07,.05],2.5);
+    }},
+    {at:5800,fn:()=>{
+      addMsg('Ah, I see something.','');
+      playHarmonic([440,554.37],[.09,.06],2.8);
+    }},
+    {at:9200,fn:()=>{
+      addMsg(hint,'');
+      playChime(329.63,.06,3.5);
+    }},
+    {at:14500,fn:()=>{
+      addMsg(`I know it. You are thinking of the word&nbsp;<strong style="font-family:'Cinzel',serif;font-weight:600;letter-spacing:.07em;color:var(--gold2);font-style:normal">${word.toUpperCase()}</strong>.`,'gold');
+      playSwell();
+      const tw0=Date.now();
+      function wf(){
+        const a=Math.min((Date.now()-tw0)/1500,1);
+        drawDial('main-dial',S.rot,{type:'word',word,alpha:a});
+        if(a<1)requestAnimationFrame(wf);
+      }
+      requestAnimationFrame(wf);
+    }},
+    {at:19500,fn:()=>{
+      addMsg(`And there is something else. Your card was <span class="sign-name">${cardName}</span>.`,'gold');
+      playBell(220);
+    }},
+    {at:23500,fn:()=>{
+      addMsg(`You never spoke a word. You never named your card. Yet here we are.`,'gold');
+      stopDrone(drone,4);drone=null;
+    }},
+  ];
+  steps.forEach(step=>setTimeout(step.fn,step.at));
+  setTimeout(()=>{
+    if(btn)btn.style.display='';
+    const rp=document.getElementById('reveal-portrait');
+    if(rp){rp.style.display='';rp.style.opacity='0';rp.style.transition='opacity 1.2s ease';
+      setTimeout(()=>{rp.style.opacity='1';},80);}
+  },28000);
+}
+
+/* ═══════════════════════════════════════
+   DRAG
+═══════════════════════════════════════ */
+function dialAngle(e,cv){
+  const r=cv.getBoundingClientRect(),sx=cv.width/r.width,sy=cv.height/r.height;
+  const px=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+  const py=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+  return Math.atan2(py*sy-cv.height/2,px*sx-cv.width/2)*180/Math.PI;
+}
+function initDrag(){
+  const cv=document.getElementById('main-dial');if(!cv)return;
+  cv.addEventListener('mousedown',e=>{
+    if(S.phase!=='spell')return;
+    S.dragging=true;S.prevAngle=dialAngle(e,cv);e.preventDefault();
+  });
+  cv.addEventListener('touchstart',e=>{
+    if(S.phase!=='spell')return;
+    S.dragging=true;S.prevAngle=dialAngle(e,cv);e.preventDefault();
+  },{passive:false});
+  const move=e=>{
+    if(!S.dragging||S.phase!=='spell')return;
+    const a=dialAngle(e,cv);
+    let d=a-S.prevAngle;
+    if(d>180)d-=360;if(d<-180)d+=360;
+    S.prevAngle=a;S.rot+=d;
+    drawDial('main-dial',S.rot,null);
+    e.preventDefault();
+  };
+  document.addEventListener('mousemove',move);
+  document.addEventListener('touchmove',move,{passive:false});
+  document.addEventListener('mouseup',()=>{S.dragging=false;});
+  document.addEventListener('touchend',()=>{S.dragging=false;});
+}
+
+/* ═══════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════ */
+document.getElementById('btn4').addEventListener('click',()=>start(4));
+document.getElementById('btn5').addEventListener('click',()=>start(5));
+document.getElementById('btn-confirm').addEventListener('click',confirm);
+document.getElementById('btn-restart').addEventListener('click',()=>start(S.wlen));
+document.getElementById('btn-reset').addEventListener('click',()=>{
+  if(drone){stopDrone(drone,0.3);drone=null;}
+  document.getElementById('btn-reset').style.display='none';
+  document.getElementById('msg-area').innerHTML='';
+  const rp=document.getElementById('reveal-portrait');
+  if(rp){rp.style.display='none';rp.style.opacity='0';}
+  drawDial('main-dial',0,null);
+  showPhase('ph-setup');
+});
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+window.addEventListener('resize',()=>{
+  resizeDial();
+});
+
+setTimeout(()=>{
+  resizeDial();
+  initDrag();
+},50);
+
+})();
+</script>
+</body>
+</html>
