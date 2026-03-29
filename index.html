@@ -275,18 +275,7 @@ canvas.dial:active { cursor:grabbing; }
   100% { transform:scale(1);    background:var(--bg2); }
 }
 .btn.lg { padding:16px 42px; font-size:14px; }
-.btn-begin {
-  display:block; width:100%; margin-top:1.6rem;
-  font-family:'Cinzel',serif; font-size:13px; letter-spacing:.2em;
-  text-transform:uppercase; font-weight:700;
-  color:#0a1e0c; background:#7ac060;
-  border:none; border-radius:3px;
-  padding:16px 0; cursor:pointer;
-  box-shadow:0 2px 8px rgba(0,0,0,0.18);
-  transition:background .18s, transform .1s;
-}
-.btn-begin:hover { background:#9ad870; }
-.btn-begin:active { transform:scale(.98); }
+
 .btn-row { display:flex; gap:12px; flex-wrap:wrap; }
 .btn-ghost {
   opacity:.55; font-size:10px; letter-spacing:.14em;
@@ -557,10 +546,9 @@ canvas.dial:active { cursor:grabbing; }
             <li><span class="num">I</span><span>Think of a <strong>four or five letter word</strong>. Commit to it.</span></li>
             <li><span class="num">II</span><span>Think of one of the playing cards on the wheel opposite.</span></li>
             <li><span class="num">III</span><span>You can rotate the disc of playing cards to view them.</span></li>
-            <li><span class="num">IV</span><span>When you are ready, rotate the disc so your card is against the <em>first letter</em> of your word. You can drag from anywhere on the inner ring — that way I cannot know which card you are thinking of.<br>Press <em>Confirm</em> at the centre of the wheel when done.</span></li>
+            <li><span class="num">IV</span><span>When you are ready, press <em>Begin</em> at the centre of the wheel. Rotate the disc so your card is against the <em>first letter</em> of your word. You can drag from anywhere on the inner ring — that way I cannot know which card you are thinking of.<br>Press <em>Confirm</em> at the centre of the wheel when done.</span></li>
             <li><span class="num">V</span><span>Do this for each letter in your word.<br>When done, sit back and think of your word. I'm going to read your mind.</span></li>
           </ol>
-          <button class="btn-begin" id="btn-begin">Begin</button>
         </div>
 
         <div class="portrait-section">
@@ -1048,6 +1036,13 @@ function drawDial(id,rot,overlay){
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillStyle='#ffffff';ctx.globalAlpha=1;
     ctx.fillText('CONFIRM',CX,CY);ctx.globalAlpha=1;
+  } else if(S.phase==='setup'){
+    /* BEGIN — invites the spectator to start */
+    const fs=Math.round(R*0.072);
+    ctx.font=`700 ${fs}px "Cinzel",serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#e8c840';ctx.globalAlpha=0.9;
+    ctx.fillText('BEGIN',CX,CY);ctx.globalAlpha=1;
   } else {
     ctx.font=`${Math.round(R*0.09)}px serif`;
     ctx.textAlign='center';ctx.textBaseline='middle';
@@ -1097,21 +1092,27 @@ function initCentreConfirm(){
     if(Math.abs(e.touches[0].clientX-_tapStartX)>DRAG_THRESHOLD||Math.abs(e.touches[0].clientY-_tapStartY)>DRAG_THRESHOLD) _wasDragged=true;
   },{passive:true});
 
-  /* On mouse click — only fires if no drag occurred */
-  cv.addEventListener('click',e=>{
-    if(S.phase!=='spell'||_wasDragged)return;
+  /* Unified centre tap handler — BEGIN during setup, CONFIRM during spell */
+  function handleCentreTap(e){
+    if(_wasDragged) return;
     const{cx,cy}=getCanvasPos(e);
-    if(!inCentre(cx,cy))return;
-    doConfirmFeedback();
+    if(!inCentre(cx,cy)) return;
+    if(S.phase==='setup'){
+      start();
+    } else if(S.phase==='spell'){
+      doConfirmFeedback();
+    }
+  }
+
+  cv.addEventListener('click',e=>{
+    if(S.phase!=='setup'&&S.phase!=='spell') return;
+    handleCentreTap(e);
   });
 
-  /* On touch end — check drag flag */
   cv.addEventListener('touchend',e=>{
-    if(S.phase!=='spell'||_wasDragged)return;
+    if(S.phase!=='setup'&&S.phase!=='spell') return;
     e.preventDefault();
-    const{cx,cy}=getCanvasPos(e);
-    if(!inCentre(cx,cy))return;
-    doConfirmFeedback();
+    handleCentreTap(e);
   },{passive:false});
 }
 
@@ -1236,16 +1237,8 @@ function start(){
   S={phase:'spell',wlen:5,rot:S.rot,recs:[],rnd:0,dragging:false,prevAngle:0};
   showPhase('ph-spell');
   drawDial('main-dial',S.rot,{type:'confirm'});
-  /* Thank you message with gold animation and chime */
-  const el=document.getElementById('step-txt');
-  if(el){
-    el.style.display='';
-    el.className='step thankyou';
-    el.innerHTML='Thank you. Now rotate your card to the <em>first letter</em> of your word, then press <em>Confirm</em>.';
-  }
-  try{ playChime(392,.07,1.8); setTimeout(()=>playChime(523.25,.06,1.5),180); }catch(e){}
-  /* After 3s transition to normal step instruction */
-  setTimeout(()=>{ if(S.phase==='spell'&&S.rnd===0) updateStep(); },3000);
+  /* Show first step instruction immediately */
+  updateStep();
 }
 let _revealTimer=null; /* pending reveal after 4-letter pause */
 
@@ -1423,10 +1416,20 @@ function initDrag(){
   const cv=document.getElementById('main-dial');if(!cv)return;
   cv.addEventListener('mousedown',e=>{
     if(S.phase!=='spell'&&S.phase!=='setup')return;
+    /* Don't intercept centre taps — let initCentreConfirm handle them */
+    const rect=cv.getBoundingClientRect();
+    const cx=(e.clientX-rect.left)*(cv.width/rect.width);
+    const cy=(e.clientY-rect.top)*(cv.height/rect.height);
+    if(Math.sqrt((cx-cv.width/2)**2+(cy-cv.height/2)**2)<=centreR) return;
     S.dragging=true;S.prevAngle=dialAngle(e,cv);e.preventDefault();
   });
   cv.addEventListener('touchstart',e=>{
     if(S.phase!=='spell'&&S.phase!=='setup')return;
+    /* Don't intercept centre taps — let initCentreConfirm handle them */
+    const rect=cv.getBoundingClientRect();
+    const cx=(e.touches[0].clientX-rect.left)*(cv.width/rect.width);
+    const cy=(e.touches[0].clientY-rect.top)*(cv.height/rect.height);
+    if(Math.sqrt((cx-cv.width/2)**2+(cy-cv.height/2)**2)<=centreR) return;
     S.dragging=true;S.prevAngle=dialAngle(e,cv);e.preventDefault();
   },{passive:false});
   const move=e=>{
@@ -1488,13 +1491,7 @@ function initDrag(){
 /* ═══════════════════════════════════════
    BUTTONS
 ═══════════════════════════════════════ */
-document.getElementById('btn-begin').addEventListener('click',()=>{
-  /* brief button animation */
-  const bb=document.getElementById('btn-begin');
-  bb.style.transform='scale(.97)';
-  setTimeout(()=>{bb.style.transform='';},150);
-  start();
-});
+
 
 
 document.getElementById('btn-try-again').addEventListener('click',()=>{
